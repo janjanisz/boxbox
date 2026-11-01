@@ -1,19 +1,31 @@
-## Stage 0 (31 Oct 2026)
+## Stage 0 - Project setup (31 Oct 2026)
 
-- The fastf1 library provides me with real F1 data of every lap of every driver, which tyre they were on, when they pitted and whether there was a safety car, in every race since 2018. I am using it because:
-  - it's free.
-  - it has good, lap-by-lap data: lap time, lap number, tyre compound (soft, medium, hard), tyre age (laps on that set of tyres), pit in and pit out laps and also track status (yellow flags, and safety cars)
-  - it returns pandas DataFrames, which are easy for me to work with. 
-This makes FastF1 fit my project well because it provides the exact data I need to measure tyre degradation and model pit strategy.
+### Why FastF1
 
-- I'm using a virtual environment because: 
-  - it keeps all of the projects separate, which is useful as different projects can use different libraries without them clashing. 
-  - It makes the project reproducible on someone else's computer. Later on I will make a requirements file which has all the required libraries to run the project. 
-  - Without a virtual environment, simply updating a library in another project could break this project.
+The FastF1 library provides me with real F1 data of every lap of every driver, which tyre they were on, when they pitted and whether there was a safety car, in every race since 2018. I am using it because:
+- It's free.
+- It has good, lap-by-lap data: lap time, lap number, tyre compound (soft, medium, hard), tyre age (laps on that set of tyres), pit in and pit out laps and also track status (yellow flags and safety cars).
+- It returns pandas DataFrames, which are easy for me to work with.
 
-- I'm keeping .venv/ and cache/ out of GitHub because:
-  - .venv/ is a very big folder, which is specific to my Mac and which can be rebuilt with pip install. This makes uploading it pointless and it would add clutter to the repo.
-  - cache/ is downloaded F1 data, making it a very big folder. It's easy to download using the fastf1 library, making it pointless to upload. 
+This matters for my project because FastF1 provides the exact data I need to measure tyre degradation and model pit strategy.
+
+### Why a virtual environment
+
+A virtual environment is a separate, private copy of Python just for this project, with its own libraries. I'm using one because:
+- It keeps all of my projects separate, so different projects can use different libraries without them clashing.
+- Without a virtual environment, simply updating a library in another project could break this project.
+- It makes the project reproducible on someone else's computer. Later on I will make a requirements file which lists all the libraries needed to run the project.
+
+This matters for my project because anyone (e.g. a recruiter) who downloads it from GitHub should be able to set it up and run it.
+
+### What I keep out of GitHub
+
+My .gitignore stops these from being uploaded:
+- .venv/ – a very big folder, which is specific to my Mac and can be rebuilt with pip install. Uploading it is pointless and would add clutter to the repo.
+- cache/ – downloaded F1 data, which makes it a very big folder. It's easy to download again using the FastF1 library, so uploading it is pointless.
+- .ipynb_checkpoints/ and .DS_Store – autosave copies from Jupyter and hidden files from macOS, which are just clutter.
+
+This matters for my project because the repo should only contain my own work (code, notebooks and notes), not anything a tool generated or that can be downloaded again.
 
 ## Stage 1 - F1 strategy basics (1 Nov 2026)
 
