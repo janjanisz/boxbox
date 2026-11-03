@@ -3,7 +3,7 @@
 ### Why FastF1
 
 The FastF1 library provides me with real F1 data of every lap of every driver, which tyre they were on, when they pitted and whether there was a safety car, in every race since 2018. I am using it because:
-- The library itself is free and open-source, but its timing data now needs an F1 TV subscription.
+- It's free.
 - It has good, lap-by-lap data: lap time, lap number, tyre compound (soft, medium, hard), tyre age (laps on that set of tyres), pit in and pit out laps and also track status (yellow flags and safety cars).
 - It returns pandas DataFrames, which are easy for me to work with.
 
