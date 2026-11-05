@@ -223,8 +223,8 @@ I decided to hold back 4 races, and I kept 16 races for training my model. Befor
 - Japanese Grand Prix
   - Main reason: High tyre wear track
   - Tyre wear evidence: Pirelli says the asphalt has "some of the highest levels of roughness and abrasion seen all season" (https://www.pitpass.com/76172/Japanese-GP-Preview-Pirelli).
-  - What it tests: mostly Hard compound tyres (418 clean laps) and Mediums (212).
-  - Limit: it has the fewest clean laps of my 4 races (686) and only 56 on Softs.
+  - What it tests: mostly Hard compound tyres (418 clean laps) and Medium compound tyres (212).
+  - Limit: it has the fewest clean laps of my 4 races (686) and only 56 on Soft compound tyres.
 
 - United States Grand Prix
   - Main reason: Medium tyre wear (my own classification), to test a track that was expected to be less extreme than Qatar.
@@ -244,7 +244,7 @@ I decided to hold back 4 races, and I kept 16 races for training my model. Befor
   - What it tests: all three tyre compounds, with at least 324 clean laps on each (1207 clean laps in total).
   - Limit: the page does not say what the tyre degradation was lower than and the sentence before it mentions that track temperature was much lower than the year before. This may only describe this race and not the track in general, so classing it as a low wear track is my own assumption/interpretation of the quote.
 
-I will not analyse or look into these 4 races. If I studied them now, what I see and learn could influence how I build my model. Furthermore they would no longer be unseen and I need some unseen races to test my model on. 
+I will not analyse or look into these 4 races until after i have trained my model. If I studied them now, what I see and learn could influence how I build my model. Furthermore they would no longer be unseen and I need some unseen races to test my model on. 
 
 ### What I need to remember
 
