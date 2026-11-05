@@ -188,4 +188,69 @@ Hypotheses:
 - Lap times alone don't directly measure tyre wear as fuel burn happens at the same time. My model will need to account for both to be accurate. 
 - I need to check odd results like Sainz's lap 45 before assuming I know the cause of the anomaly. 
 
+## Stage 4 - Choosing my races (5 Nov 2026)
+
+In this stage I needed to decide which 2023 races I should use to train my model on, remove the wet races and also choose which dry races to hold back for testing. I wanted a mix of tyre wear in my test races, however I had not yet measured tyre wear and looked into it in detail. To solve this, I looked for sources on how hard each track was on tyres. While doing this, I found out that Pirelli had brought in a new and updated slick tyre to the British Grand Prix (round 10). In turn, I checked my reasoning to why I used only one season, because that only depended on the tyres staying comparable. 
+
+### Why one season
+
+Originally I stated that I am using one season because cars and tyres can change between seasons, so keeping to 2023 keeps my lap times comparable. If lap times change within my data, the cause is more likely to be something like tyre age than a difference between years. 
+
+However, after doing some research on the 2023 season, I found out that the tyres may not have been the same all year. Formula 1 reported in May 2023 that Pirelli were set to bring a new slick tyre spec to the British Grand Prix, which was round 10 (https://www.formula1.com/en/latest/article.pirelli-set-to-introduce-new-slick-tyre-spec-at-silverstone.UxGxS3zoIJvaEdVCjEOs3.html). After the race, Mario Isola said "the new construction was working as expected" (https://www.grandprix247.com/2023/07/11/pirelli-the-new-tyre-construction-working-as-expected/). Neither article says whether it covered all compounds or all later races and I have not yet measured what effect the new slick tyre spec could have had on lap times. 
+
+To compensate for this, I decided to hold back races from both before Silverstone (Australian and Spanish Grand Prixs) and after it (Japanese and United States Grand Prixs), so that my final test of the model covers both periods. This is useful because if all of my test races came from one side of the change, a good score would only show that my model works on that specific version/model of tyres. It would not tell me whether it works on the other version too. With two test races on each side of the tyre change, my final test of my model will cover both periods, and I will be able to make a better conclusion on my model and its accuracy as a result.
+
+My training races also cover both periods, with 6 races from before the British Grand Prix (round 10), and 10 races from round 10 onwards. This means that my model will not only learn from one version of the tyres. Furthermore, it also means that I can compare the test scores from each side of the tyre change. If the scores were very different, that could be a sign that the change of tyres altered the way the tyres degraded. However it is important to note that it would not prove that concretely, as there are only 2 races on each side and as they are on different tracks - the sample size of test races is too small to make any certain conclusions. 
+This does not remove the problem, but it means that my test does not rely on only one side of the change and gives me a way to check for it. 
+
+### Finding wet races and cleaning the data
+
+I wanted to clean my data to remove any races where there were either intermediate or wet tyre compounds used, as i mentioned in earlier stages. To do this, I listed the 2023 races with `fastf1.get_event_schedule`, which gave me 22 races. After that, I loaded each race and counted the laps driven on intermediate or wet tyres, of which only 2 races had any. 
+- Monaco Grand Prix: 399 intermediate laps and 45 wet laps --> 444 in total.
+- Dutch Grand Prix: 325 intermediate laps and 3 wet laps --> 328 in total.
+
+I decided to drop any race with at least 1 lap on intermediate or wet tyre compounds, which ended up only being the two i listed above. This left me with 20 races of data that I could work with to train and test my model on. 
+Note: What I did to clean the race data still keeps races where it rained, but no intermediate or wet tyre compounds were used. 
+
+### Why I hold some races back
+
+My model will need testing on some races that it has never seen. If I only tested it on races it trained on the score would look much better than it really is and as a result I would also not know if It would work on a new track that it hadn't seen before.
+
+### The races I held back 
+
+I decided to hold back 4 races, and I kept 16 races for training my model. Before choosing which races i held back, I counted the clean laps in all 20 dry races. I did this using my clean lap rule from earlier stages. The reason I did this was because clean laps are the laps I can actually use to both train and test my model on, so a race with very few of them would make a weak race to test my model on. I found out that the lowest clean lap count for a race was 644 laps at the Las Vegas Grand Prix, so I did not rule out any race to hold back for testing for this reason alone. Furthermore, I also split the counts by tyre compound and I did this because I wanted to see which tyres each race could test my model on. 
+
+- Japanese Grand Prix
+  - Main reason: High tyre wear track
+  - Tyre wear evidence: Pirelli says the asphalt has "some of the highest levels of roughness and abrasion seen all season" (https://www.pitpass.com/76172/Japanese-GP-Preview-Pirelli).
+  - What it tests: mostly Hard compound tyres (418 clean laps) and Mediums (212).
+  - Limit: it has the fewest clean laps of my 4 races (686) and only 56 on Softs.
+
+- United States Grand Prix
+  - Main reason: Medium tyre wear (my own classification), to test a track that was expected to be less extreme than Qatar.
+  - Tyre wear evidence: GPblog reported that Pirelli expected "much more controllable tyre wear" compared with Qatar (https://www.gpblog.com/en/news/pirelli-preview-gp-united-states-cota.html).
+  - What it tests: mostly Medium compound tyres (514 clean laps) and Hard compound tyres (391), with 912 clean laps in total.
+  - Limit: the comparison is only with Qatar, which I found out that Mario Isola called "a very challenging circuit for tyres" (https://www.gpblog.com/en/news/241194/pirelli-warns-of-tyre-wear-gp-qatar-2023.html). This shows Austin was expected to be easier than Qatar, but it does not prove that it is a medium wear track, so this is my own judgement. It also only has 7 clean laps on Softs.
+
+- Australian Grand Prix
+  - Main reason: Medium/normal tyre wear 
+  - Tyre wear evidence: Pirelli's preview says energy demands on the tyres are "about average for the season" with "contained levels of abrasion" (https://www.pitpass.com/74783/Australian-GP-Preview-Pirelli).
+  - What it tests: mostly Hard compound tyres, with 655 clean laps out of 756 in total.
+  - Limit: it only has 8 clean laps on soft compound tyres and 93 clean laps on Medium compound tyres. 
+
+- Spanish Grand Prix
+  - Main reason: Low tyre wear (my own classification). It also gives my test more clean laps on Softs from before Silverstone.
+  - Tyre wear evidence: Mario Isola said "initial analysis suggests that degradation on all the compounds was lower, even with the softest C3" (https://press.pirelli.com/2023-spanish-grand-prix---sunday/).
+  - What it tests: all three tyre compounds, with at least 324 clean laps on each (1207 clean laps in total).
+  - Limit: the page does not say what the tyre degradation was lower than and the sentence before it mentions that track temperature was much lower than the year before. This may only describe this race and not the track in general, so classing it as a low wear track is my own assumption/interpretation of the quote.
+
+I will not analyse or look into these 4 races. If I studied them now, what I see and learn could influence how I build my model. Furthermore they would no longer be unseen and I need some unseen races to test my model on. 
+
+### What I need to remember
+
+- Spain is my low wear track, but this is my own assumption from one post race comment. I did not find a source that directly calls any of my 4 races a low wear track, and the descriptions come from different articles. 
+- 324 of the 395 clean Soft compound tyre laps in my test races come from Spain, so the test will say less about Soft compound tyres at other tracks.
+- The Canadian Grand Prix has 35 laps with no compound recorded. I cannot tell which tyre those laps were on from this data, so I need to decide how to deal with them when I clean the data.
+
+
 
