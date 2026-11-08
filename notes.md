@@ -252,5 +252,54 @@ I will not analyse or look into these 4 races until after i have trained my mode
 - 324 of the 395 clean Soft compound tyre laps in my test races come from Spain, so the test will say less about Soft compound tyres at other tracks.
 - The Canadian Grand Prix has 35 laps with no compound recorded. I cannot tell which tyre those laps were on from this data, so I need to decide how to deal with them when I clean the data.
 
+## Stage 5  - Cleaning part 1 (8 Nov 2026)
 
+In this stage I began to clean my data, and I started with the Bahrain Grand Prix. The aim was to remove any laps that would be misleading for my model for the reasons of being either slow or unreliable for reasons other than tyre wear. The reason I chose to clean the Bahrain Grand Prix data first was because I already know this race well from earlier stages of my project.
 
+### What I removed and why
+
+- In laps and out laps: I removed these laps as they include time spent in the pit lane and as a result would look like laps with huge tyre wear (due to the increased lap time) when they are not. I used `laps.pick_wo_box()`, which only keeps laps where `PitInTime` and `PitOutTime` are both empty. Note: this is the same check I used for my clean lap rule in Stage 3. 
+- Lap 1: I removed this lap for all drivers because it is slow for all of them due to the standing start and not the tyres degrading. 
+- Inaccurate laps: `IsAccurate` is FastF1's own ruling system for whether it trusts the timing of a particular lap, so I only kept the laps where it was `IsAccurate == True` 
+- Laps with no lap time: these laps will be useless to me as my model will not be able to learn anything from a lap with no lap time. 
+
+### How many laps each step removed. 
+
+| Step | Laps left | Laps removed |
+|---|---:|---:|
+|Start | 1056 | 0 | 
+| Remove in laps and out laps | 954 | 102 |
+| Remove lap 1 | 934 | 20 |
+| Remove inaccurate laps | 914 | 20 |
+| Remove laps with no lap time | 914 | 0 |
+
+To summarise, I went from 1056 laps total for the Bahrain Grand Prix to 914 laps (142 laps were removed). 
+
+### How FastF1 decides if a lap is accurate
+
+It was important to me to understand what my inaccurate lap step was actually removing, as I did not understand how FastF1 decides if `IsAccurate` is True or False. I did this by using Claude to help me go through FastF1's code for the function that sets it, `_check_lap_accuracy` in `fastf1/core.py` (version 3.9.0). This function runs automatically when I call `session.load()` and it goes through every lap of every driver. 
+
+A lap is only marked as accurate if it passes all 4 of its checks:
+1. It has to be a normal racing lap which had complete data. This means that it cannot be: an in or out lap, it cannot be a lap that FastF1 created to fill in missing data, its track status has to be green or yellow (1, 2, 12, or 21) and it has to have a lap time and all three sector times. 
+2. The three sector times have to add up to its lap time, to within 0.003s. If they do not then something is wrong with the timing data. 
+3. The lap before it cannot be a Safety Car lap (track status 4), as the first lap after a Safety Car often has problems with the timing. 
+4. Its lap time has to match the time between the end of the previous lap and the end of this one to within 0.003s.
+
+With these 4 checks in place, if any one of them fails for a given lap, it will be marked as inaccurate. It was important to me that I understood this as it explains to me what I saw in the results of my data cleaning. 
+
+### What I found when I checked the removed laps. 
+
+Before I researched and understood my inaccurate step, I investigated the 20 laps that it removed. I found out that all of them were on laps 40, 41, 42 and had a TrackStatus of 126, 671 or 2671. All 3 of these codes contain a 6, which means a Virtual Safety Car had been deployed on those laps. This means that those 20 laps failed check 1 of the inaccurate lap checks, because their track status was not green or yellow. Furthermore, one of the 20 laps was Leclerc's lap 40, which had no lap time at all. 
+
+My last step (removing laps with no lap time), removed zero laps. This is because check 1 had already marked every lap with no lap time as inaccurate, so the inaccurate step had already removed the only one at Bahrain (Leclerc's lap 40). This means that this step will always remove 0 laps when it comes after the inaccurate laps step. Despite this, I have decided to keep it as a safety check to make sure nothing goes wrong or missed. 
+
+### Why the order matters. 
+
+The number of laps that each step will remove depends on the steps that came before it. As an example, whilst 142 laps in the whole race are marked as inaccurate, only 20 were removed at the inaccurate lap step. This is because my first two steps had already removed the other 122 laps. My counts show what each step removed at that point in my cleaning, not how many laps in the race have that problem overall. 
+
+### What I still need to do going forward. 
+
+- 25 of my 914 laps are yellow flag laps (19 have TrackStatus 21 and 6 have TrackStatus 12). FastF1 counts yellow flag laps as accurate, so my inaccurate lap step kept these laps. However, as I planned in stages 2 and 3, I will remove these laps in my further cleaning steps as they are slow for reasons that are not tyre wear. I do not need to remove Safety Car or VSC laps separately, because check 1 already marks them as inaccurate, so my inaccurate lap step removes them. For Bahrain, this will leave 889 laps, which matches the 889 clean laps for Bahrain in my stage 4 table. 
+- In Stage 3 I said that traffic might also affect lap times and that I would need to deal with this when cleaning my data. Whilst I have not done this yet I will look into it in further stages of my data cleaning. 
+- When I loaded my races in Stage 4, FastF1 warned that "all laps marked as inaccurate" for one driver each at the Italian, Singapore, Qatar, and Sao Paulo Grand Prix. My inaccurate step could remove all of those drivers' laps, so I need to check this when I run my cleaning on more races. 
+- In stage 4 I found that the Canadian Grand Prix has 35 laps with no compound recorded. None of my steps in this stage so far have been able to remove laps of such nature, so I still will need to decide how I want to deal with them. 
