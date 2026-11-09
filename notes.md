@@ -127,11 +127,11 @@ What I've learnt from this, and why it matters:
 - Moving forward I will need to remove: lap 1, in laps, out laps and yellow flag/Safety Car/Virtual Safety Car laps before modelling tyre degradation. This is because those laps have slower times but not because of tyre degradation.  
 - Stint 2 and 3 showed me that I can't just look at lap times alone to see degradation. I will need to account for fuel, or my model would show that tyres barely degrade.
 
-## Stage 3 - The "aha" chart (3 Nov 2026)
+## Stage 3 - Lap time charts (3 Nov 2026)
 
 ### Verstappen chart 
 
-I plotted Verstappen's lap times against lap number and coloured each dot by tyre compound. Having done that, you can now read the graph and interpret key events from his race using it. 
+I plotted Verstappen's lap times against lap number and coloured each dot by tyre compound. Having done that, you can now read the chart and interpret key events from his race using it. 
 - Lap 1 was slightly slow (99.0s) and this is due to the standing start at the beginning of the race. 
 - Each of his two pit stops show up as a pair of slow laps. In laps (lap 14 and lap 36) were both around 101s and out laps (lap 15 and 37) were both around 118s.
 - Laps 41 and 42 were slow (120.5s and 104.8s) and this is because of a Virtual Safety Car deployment, which I can confirm by looking at the TrackStatus values, which for these laps were 126 and 671. He did not pit on either of these laps and I can confirm this as PitInTime and PitOutTime are empty on both laps.
@@ -144,12 +144,12 @@ Note: I define clean lap by green flag conditions (TrackStatus 1) on any lap bar
 
 ### Why I zoomed in
 
-On the graph I plotted using matplotlib, the y-axis had to stretch to about 120s to fit Verstappen's slowest laps. Verstappen's clean laps only ranged from about 96.2s to 98.6s, which meant that with such a large range on the y-axis they looked almost flat making it hard to see any changes within a stint. Using `plt.ylim(95.5, 99.5)` decreased the range of the y-axis and zoomed in on Verstappen's clean laps and cut the pit and VSC laps off the chart. 
+On the chart I plotted using matplotlib, the y-axis had to stretch to about 120s to fit Verstappen's slowest laps. Verstappen's clean laps only ranged from about 96.2s to 98.6s, which meant that with such a large range on the y-axis they looked almost flat making it hard to see any changes within a stint. Using `plt.ylim(95.5, 99.5)` decreased the range of the y-axis and zoomed in on Verstappen's clean laps and cut the pit and VSC laps off the chart. 
 Note: The VSC and pit in/out laps are still in the data and I'll remove them during cleaning. 
 
 ### Comparing three drivers 
 
-I compared three drivers: Verstappen, Sainz and Hamilton. I made sure that they had all completed all 57 laps before analysing them. On the graph each driver got one colour and this is because colouring by compound (such as on the Verstappen graph) wouldn't show whose dot was whose. To avoid the issue of the y-axis range making the dots on the graph looking flat, I used `plt.ylim(95, 102)`. This left me with a readable graph which I could analyse and compare three drivers from. 
+I compared three drivers: Verstappen, Sainz and Hamilton. I made sure that they had all completed all 57 laps before analysing them. On the chart each driver got one colour and this is because colouring by compound (such as on the Verstappen chart) wouldn't show whose dot was whose. To avoid the issue of the y-axis range making the dots on the chart looking flat, I used `plt.ylim(95, 102)`. This left me with a readable chart which I could analyse and compare three drivers from. 
 
 Pit stops (in laps):
 When pitting you have both an in lap and an out lap. Here I am only noting down the in lap however it is important to know that if the driver rejoins the race, the out lap is the lap directly after the in lap (e.g. if the in lap is lap 4 then the out lap is lap 5)
@@ -303,3 +303,90 @@ The number of laps that each step will remove depends on the steps that came bef
 - In Stage 3 I said that traffic might also affect lap times and that I would need to deal with this when cleaning my data. Whilst I have not done this yet I will look into it in further stages of my data cleaning. 
 - When I loaded my races in Stage 4, FastF1 warned that "all laps marked as inaccurate" for one driver each at the Italian, Singapore, Qatar, and Sao Paulo Grand Prix. My inaccurate step could remove all of those drivers' laps, so I need to check this when I run my cleaning on more races. 
 - In stage 4 I found that the Canadian Grand Prix has 35 laps with no compound recorded. None of my steps in this stage so far have been able to remove laps of such nature, so I still will need to decide how I want to deal with them. 
+
+## Stage 6 - Cleaning part 2: Safety Cars and flags (9 Nov 2026)
+
+In this stage I continued to clean my data for the Bahrain Grand Prix, starting from the 914 laps which I had left from the end of Stage 5, my initial cleaning of the data. My aim for this stage was to only keep laps that were driven in green flag conditions, as laps which are under a yellow flag, a Safety Car, or a VSC can be slower for reasons that are not tyre wear. 
+
+### Track status codes
+
+Previously in Stage 2 I already wrote down what each TrackStatus code means, but as a reminder: 
+- 1 = Green flag
+- 2 = Yellow flag
+- 4 = Safety Car
+- 5 = Red flag
+- 6 = VSC deployed
+- 7 = VSC ending
+
+When the track status changes during a lap, FastF1 joins the track status codes together in the order that they happen during the lap whilst using each code only once (e.g. 21 means the lap started under a yellow flag and then went to a green flag, and 12 means that the lap started under a green flag and then went to a yellow flag). I found this out by using Claude to help me read the part of FastF1's code that builds the TrackStatus column.
+
+### What happened at the Bahrain Grand Prix (TrackStatus)
+
+Before I cleaned any of the laps, I investigated the track status codes for every lap of the race, to see how many laps of what conditions there were. 
+
+| TrackStatus | Laps |
+|---|---:|
+| 1 | 979 |
+| 12 | 26 |
+| 21 | 19 |
+| 126 | 14 |
+| 671 | 13 |
+| 2671 | 5 |
+
+No lap had a 4 or a 5 in its track status code, meaning that there was no Safety Car and no red flag at the Bahrain Grand Prix. 32 of the laps had a 6 in them, all of them on laps 40 to 42, and these are the laps from the same VSC that I found in Stages 2, 3 and 5. However, my cleaning in Stage 5 has already removed all of these laps: 12 of them were in or out laps, which my first step removed, and the other 20 were removed by my inaccurate lap step. This left the only thing to deal with being the yellow flags. 
+
+### What I removed and why I removed it. 
+
+To remove the yellow flag laps I used `cleaned.pick_track_status('1')`, which only keeps laps where the track status is exactly 1. This means that laps with a track status of 12 or 21 were removed as well, because the flag changed during those laps. I removed these laps because, as I planned in Stages 2 and 3, yellow flag laps can be slower for reasons that are not tyre wear. Under a yellow flag drivers have to slow down in that part of the track and are not allowed to overtake, and I can't tell from the lap time alone how much each lap was affected, so I removed all of them.
+
+In total I removed 25 laps.
+
+- 20/25 laps that I removed were on lap 2, and there was one for every driver. 19/20 had a track status code of 21 and 1/20 had a track status code of 12.
+- The remaining 5/25 laps which I had removed all had a track status code of 12: Ocon and Norris on lap 39, and Alonso, Hamilton and Sainz on lap 40. 
+
+After I removed these 25 laps, `value_counts()` showed me that all 889 laps left after my cleaning have a track status code of 1. This matches the 889 clean laps for Bahrain in my table showing clean laps in Stage 4. This means that my cleaning steps which I have used leave exactly the same laps as the clean lap rule which I set in Stage 3: green flag track status, not lap 1, and not an in or out lap. 
+
+### How many laps each step removed (updated version)
+
+| Step | Laps left | Laps removed |
+|---|---:|---:|
+| Start | 1056 | 0 |
+| Remove in laps and out laps | 954 | 102 |
+| Remove lap 1 | 934 | 20 |
+| Remove inaccurate laps | 914 | 20 |
+| Remove laps with no lap time | 914 | 0 |
+| Keep only green flag laps | 889 | 25 |
+
+I went from 1056 laps to 889 laps for the Bahrain Grand Prix. 167 laps were removed in total.
+
+### Why Safety Car laps would ruin my degradation estimate (explanation) 
+
+Previously in Stage 1 I explained that laps behind a Safety Car or a VSC are slower than laps with green flag conditions because of the drivers being told to slow down and not because of the tyres being worn. Verstappen's laps 40 to 42 show this clearly. I used these laps because in Stages 2 and 3 I found that laps 41 and 42 were Verstappen's slow VSC laps, and lap 40 was his last green flag lap before the VSC on the same set of tyres.
+
+| Lap | Lap time | TrackStatus | TyreLife |
+|---|---:|---|---:|
+| 40 | 96.942s | 1 | 4 |
+| 41 | 120.495s | 126 | 5 |
+| 42 | 104.824s | 671 | 6 |
+
+Between lap 40 and 41, Verstappen's hard compound tyres got only 1 lap older (no pitstop) however his lap time went up by around 23.6s. One lap of tyre wear would be incredibly unlikely to do that. This is explained by the fact that the track status shows that laps 41 and 42 were under a VSC (contains 6 in track status code). In comparison, all Verstappen's cleaned laps on hard compound tyres were between 96.236s and 97.427s, which is a spread of only about 1.2s --> this emphasises how a jump of 23.6s is likely impossible to be just due to tyre wear over the course of 1 lap. 
+
+As my model will learn how lap time changes as the tyres a driver is on get older, if I had kept lap 41 the model would see a hard tyre that was only 5 laps old being around 23 to 24 seconds slower than the previous laps on that hard compound tyre, thus it would think that the tyres had massively degraded over the course of only 1 lap. I think that including laps like these would massively skew the tyre wear in the stint, making my tyre degradation estimate come out far higher than it really is. A Safety Car would have the same effect as the VSC has shown here, but amplified and this is because a Safety Car being deployed usually lasts for more than one lap, so there would be several of these laps in a row, in contrast to a VSC which can be active for only 1 lap. 
+
+### Re-plotted Verstappen lap time chart
+
+![Verstappen's cleaned laps, Bahrain 2023](figures/Verstappen_Bahrain_Grand_Prix_2023_cleaned_laps.png)
+
+In this stage, I also replotted my chart for Verstappen, however this time I only used my 889 cleaned laps dataset for the Bahrain Grand Prix in contrast to previously using the uncleaned data to plot it. This left Verstappen with 49 laps of which 31 were on soft tyres and 18 on hard tyres. 
+
+- This time, when plotting the chart I no longer had to use `plt.ylim`, whilst in Stage 3 I had to use it to zoom in as the pit and VSC laps stretched the y-axis to about 120s, which made his clean laps look almost flat. Now that the data has been cleaned, the y-axis only runs from Verstappen's fastest clean lap (96.236s) to his slowest clean lap (98.591s). 
+- The gaps in the chart are the laps I have removed.
+- It is much easier to identify trends in lap time changes.
+
+### What I need to do going forward. 
+
+- In Stage 3 I mentioned that traffic might affect lap times, for example Sainz running in 4th and Hamilton in 5th in the early laps. I haven't yet dealt with traffic, and this will be my next step in my data cleaning. 
+- Sainz's lap 45 (99.56s with green flag conditions and no pit stop) is still in my cleaned laps, because it passed every step. In Stage 3 I said I need to check odd results like this before assuming I know the cause, so I still need to look into it.
+- In Stage 2 I found that TyreLife doesn't always show how old a set of tyres really is. Verstappen's second set of soft tyres started at a TyreLife of 1, but FreshTyre was False, which means they had been used before. So I can't fully trust TyreLife as the age of a tyre. I still need to check how often this happens across my races and decide how to deal with it.
+- When I loaded my races in Stage 4, FastF1 warned that "all laps marked as inaccurate" for one driver each at the Italian, Singapore, Qatar and Sao Paulo Grand Prix. I also found in Stage 4 that the Canadian Grand Prix has 35 laps with no compound recorded. Neither of these problems shows up at Bahrain, so I still need to deal with both of them when I run my cleaning on more races.
+- Bahrain didn't have a Safety Car, so I haven't yet seen my cleaning remove any Safety Car laps. When I run my cleaning on races that did have a Safety Car, I need to check that the Safety Car laps and the lap after them are removed, as I expect from checks 1 and 3 of FastF1's accuracy checks in Stage 5.
