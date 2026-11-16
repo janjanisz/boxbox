@@ -390,3 +390,148 @@ In this stage, I also replotted my chart for Verstappen, however this time I onl
 - In Stage 2 I found that TyreLife doesn't always show how old a set of tyres really is. Verstappen's second set of soft tyres started at a TyreLife of 1, but FreshTyre was False, which means they had been used before. So I can't fully trust TyreLife as the age of a tyre. I still need to check how often this happens across my races and decide how to deal with it.
 - When I loaded my races in Stage 4, FastF1 warned that "all laps marked as inaccurate" for one driver each at the Italian, Singapore, Qatar and Sao Paulo Grand Prix. I also found in Stage 4 that the Canadian Grand Prix has 35 laps with no compound recorded. Neither of these problems shows up at Bahrain, so I still need to deal with both of them when I run my cleaning on more races.
 - Bahrain didn't have a Safety Car, so I haven't yet seen my cleaning remove any Safety Car laps. When I run my cleaning on races that did have a Safety Car, I need to check that the Safety Car laps and the lap after them are removed, as I expect from checks 1 and 3 of FastF1's accuracy checks in Stage 5.
+
+## Stage 7 - Cleaning part 3: Traffic (16 Nov 2026)
+
+During this stage I continued to clean the data for the Bahrain Grand Prix. My start point was the 889 laps which I had left at the end of Stage 6. In Stage 3 I had said that traffic may be a factor which affects lap times and that I would deal with it when cleaning my data, and now is the time I deal with it. My plan for this stage also included removing wet races, but I had already done this in Stage 4, where I dropped the Monaco and Dutch Grand Prix because of their wet tyre laps, so this stage only deals with traffic. 
+
+A driver who is stuck close behind a car in front may be slower due to the car in front and not because of their car's tyres. It is important that I don't mistake lost time due to traffic for lost time due to tyre wear, and it would inaccurately train my model. 
+
+### Methods I tested but I didn't use
+
+Before deciding on a final method to find traffic laps, I tested 2 other methods.
+
+1. `pick_quicklaps(1.07)`: ⁠this is a FastF1 function which only keeps laps that are faster than 107% of the fastest lap. When testing it on the 889 clean laps left from Stage 6, the fastest lap remaining was 93.996s, so 93.996*1.07 gives us the limit, which was 100.576s. This removed 91 laps, leaving 798. Having reviewed which laps were removed, I found that the drivers who lost the most laps were: Magnussen (12), Piastri (10), Zhou (9), Sargeant (8) and de Vries (8). From my own knowledge, I know that most of these drivers in the 2023 season were in teams with slower cars. This led me to consider this method, which I realised was flawed. This was because it compared every driver's laps to the single fastest lap of the race, resulting in the removal of laps completed by drivers in slower cars or with slower pace, rather than being affected by traffic.
+
+2. Removing laps which are more than 7% slower than the driver's own median lap: this method compared every lap a driver had done to that drivers median lap, which to me seemed like a more fair method. However, this method removed 0 laps. I suspect this is because of the cleaning I had already done which had removed very slow laps (in and out laps, VSC laps, lap 1, and yellow flag laps). This also showed me that laps close behind another car were nowhere near 7% slower. 
+
+### The method I used
+
+Instead of comparing lap times, I decided to look at what was happening around each driver. I did this by working out the gap to the car in front at the end of every lap. If a driver was close behind another driver in front, it was in traffic and the car in front may be affecting its lap times. 
+
+FastF1 doesn't give this gap directly, so I worked it out from two columns I had. `Time` is the session time when a driver finished the lap and `Position` is their place in the race at that moment. The gap between a driver and the driver in front is the driver's `Time` subtract the `Time` of the car one place ahead of it on the same lap. To match each driver with the car ahead of them, I made a copy of the table where every position was moved down by one and then joined the two tables on lap number and position using `merge`. I used all of the laps in the race for this, not just my cleaned laps, because the car ahead could have been on a lap I had already removed. 
+
+As a check, Verstappen's first rows showed him in 2nd place behind Pérez on laps 15 to 17, with the gap between them shrinking from 11.308s to 6.627s. This made sense to me because he had pitted at the end of lap 14 (Data taken from stage 3) and was catching Pérez.
+
+Following this, I added the gap to my 889 cleaned laps. 840 laps had a gap, but 49 didn't and that is because 49 laps had no car ahead as the driver was leading the race (47 laps were Verstappen's and 2 were Pérez's). Half of all laps were more than 3.3s behind the car ahead, and a quarter were within around 1.4s.
+
+I had to choose a limit for what laps I would class as in traffic. To aid my decision, I counted how many laps fell under different gaps:
+
+| Gap to the car ahead | Laps |
+|---|---:|
+| Under 1.0s | 134 |
+| Under 1.5s | 229 |
+| Under 2.0s | 315 |
+
+Ultimately, I chose to go with the 1 second gap to count as a lap in traffic. This is the gap at which a car behind is allowed to use DRS, so it is what I would call the standard way to say a car is close behind another car. Furthermore, an added bonus of choosing the 1 second gap is that it catches the fewest laps, meaning I would not be throwing away as many laps where the driver might not have been held up in traffic at all (because not all sub-1 second gaps mean a slower lap). Laps which are under 1 second behind another car are marked as `InTraffic`.
+
+### Testing if traffic laps are actually slower. 
+
+Choosing the method for selecting laps which I class as in traffic was not enough, as it will only make sense to remove traffic laps which are actually slower due to the traffic itself. 
+
+First, I compared every lap to that driver's median lap over the whole race. Comparing each driver to themselves makes it fair between drivers, as a slow car is not judged against a faster car and vice versa.
+
+| Laps | Count | Mean (s) | Median (s) |
+|---|---:|---:|---:|
+| Not in traffic | 755 | 0.080 | -0.053 |
+| In traffic (under 1s behind) | 134 | 0.899 | 0.646 |
+
+This analysis suggested to me that traffic laps were typically about 0.65s slower than a normal lap without any traffic. However, when I checked when the traffic laps happened during the race, the median lap number for traffic laps was lap 12, compared to lap 30 for the other laps which are not in traffic. From this I drew the conclusion that traffic laps happen early in the race, which is when cars are still close together following the race start. In addition to this, early laps are slower than laps later in the race as the cars have more fuel and are likely still on their first set of tyres - I saw this earlier in Stages 2 and 3 where Verstappen's first stint had lap times of around 98s, whilst his last stint on hard tyres had lap times of around 96.5s. This made me think my test was unfair, as it was probably comparing early laps against later laps, where factors other than traffic affected the lap times. 
+
+To make the test fair, I compared each lap only to that driver's median lap within the same stint, so it was compared to laps on the same set of tyres at a similar point in the race. 
+
+| Laps | Count | Mean (s) | Median (s) |
+|---|---:|---:|---:|
+| Not in traffic | 755 | 0.031 | 0.000 |
+| In traffic (under 1s behind) | 134 | -0.036 | -0.016 |
+
+
+With my new test, traffic laps come out to be 0.016s faster than the median laps in each stint, which is a small enough difference to be considered down to driver error, more so than traffic. As a result, at Bahrain my data does not show that being less than 1 second behind another car makes a lap slower. The 0.65s difference from my first test was likely due to fuel and tyres, not traffic.
+
+These tests lead me to believe that there are other reasons to why traffic does not make a difference in lap time. I suspect that a possible reason for this is that a car being close behind another car has two notable effects which work against each other: dirty air slows down a car in corners, whilst DRS and a slipstream will speed it up on the straights. Another reason could be that a car close behind another car might just be a faster car that is catching up with a slower car. I can't prove either possibility. 
+
+### My decision
+
+As my test showed that traffic laps were not slower at Bahrain, I decided to not remove them in the cleaning. I kept all 889 laps and the `GapAhead` and `InTraffic` columns for every lap.
+
+Another option I considered was removing all laps under 1 second behind (InTraffic) regardless, as the car in front would affect the car behind in one way or another making it slower or faster. Some of these laps were slowed down, for example Sainz's lap 45 (see below), but as a group the traffic laps were no slower than my other laps. Removing all of them would mean throwing away 134 of my 889 laps, most of which were run at normal pace, just to catch the few that were held up. I decided against doing this. 
+
+### Sainz's lap 45
+
+In stage 3 I found that Sainz's lap 45 was slow (99.56s), even though it had green flag conditions and he didn't pit. I want to investigate odd results such as Sainz's lap 45 and I figured that now was a good time, as I had the gap to the car ahead of Sainz so I can now check what is happening around him possibly causing the slower lap. 
+
+| Lap | Lap time (s) | Car ahead | Gap ahead (s) |
+|---|---:|---|---:|
+| 43 | 97.294 | Pérez | 23.729 |
+| 44 | 97.389 | Pérez | 24.140 |
+| 45 | 99.561 | Alonso | 0.988 |
+| 46 | 97.844 | Alonso | 1.745 |
+| 47 | 98.222 | Alonso | 2.641 |
+
+On laps 43 and 44, the car ahead of Sainz was Pérez, and he was around 24s in front --> Sainz was in clean air. On lap 45, the car ahead suddenly became Alonso, who was less than a second in front. The car directly ahead can only change if the race order changes, so I checked it. 
+
+| Lap | Sainz | Alonso |
+|---|---:|---:|
+| 43 | 3rd | 4th |
+| 44 | 3rd | 4th |
+| 45 | 4th | 3rd |
+| 46 | 4th | 3rd |
+
+Sainz and Alonso swapped places on lap 45, which means Alonso passed Sainz on the same lap that Sainz was slow on. Lap 45 was 1.901s slower than Sainz's typical lap in that stint and after it Alonso pulled away and built a gap to Sainz (1.745s and then 2.641s on laps 46 and 47). My data doesn't show exactly how the overtake happened, but it explains why the lap was slow without it being anything to do with Sainz's tyres. 
+
+Sainz's lap 45 remains in my data and it will be marked as `InTraffic` because Sainz finished it 0.988s behind Alonso. If traffic turns out to matter across all of my races, laps such as this one will be removed then. 
+
+### What's left
+
+After all of my cleaning, I checked whether anything in my 889 laps still looked wrong. I compared each lap to that driver's typical lap in the same stint (the fair comparison from my traffic test).
+
+Half of all of my laps were within about 0.22s of their stint's typical lap (between -0.225s and 0.224s), which showed to me that my cleaned laps are consistent. The slowest lap left was only 2.928s slower than its respective median lap (Norris' lap 49) --> no extreme lap times remain in my cleaned data. 
+
+These were the slowest laps left compared to the respective stint median laps:
+
+| Driver | Lap | Lap time (s) | Slower than stint's typical lap (s) | Gap ahead (s) |
+|---|---:|---:|---:|---:|
+| Norris | 49 | 99.080 | 2.928 | 61.118 |
+| Hülkenberg | 46 | 99.972 | 2.666 | 11.693 |
+| Sargeant | 56 | 99.626 | 2.170 | 8.512 |
+| Norris | 36 | 99.886 | 2.067 | 14.330 |
+| Magnussen | 54 | 99.651 | 1.912 | 1.552 |
+| Sainz | 45 | 99.561 | 1.901 | 0.988 |
+| Hülkenberg | 56 | 99.206 | 1.900 | 1.388 |
+| de Vries | 25 | 100.960 | 1.805 | 1.411 |
+| Ocon | 29 | 101.181 | 1.746 | 5.265 |
+| de Vries | 51 | 100.475 | 1.588 | 1.822 |
+
+7/10 of these laps were on lap 45 or later (near the end of the race). This could be due to the tyres wearing out, which is what I want my model to learn --> so I kept the laps. 
+
+I also checked how many laps each driver had left following my cleaning, to make sure that no driver had almost no data left. 
+
+| Driver | Laps left | Last recorded lap |
+|---|---:|---:|
+| Piastri | 10 | 13 |
+| Ocon | 30 | 41 |
+| Leclerc | 33 | 40 |
+
+Piastri, Ocon and Leclerc have the fewest number of laps left because their races ended early. Their last recorded laps were 13, 41 and 40 of the initial 57. This means that my cleaning did not wrongly delete their laps. My data doesn't show why these drivers' races ended early, but I kept their laps because they are all still clean, green flag laps, just fewer of them. 
+
+In summary, nothing in my cleaned data looks wrong. 
+
+### Limits of my methods of measuring traffic. 
+
+The methods which I used to measure traffic have some limits which I need to keep in mind. 
+
+- The gap is only measured once per lap, when the driver crosses the finish line. A driver could be stuck behind another car for most of a lap and then get past before the line and this would not be shown by the gap the way I measured it. 
+- Being less than 1 second behind does not always mean being held up. The driver behind could be attacking and could be faster than the car in front. 
+- "The car ahead" means the car one place ahead in the race order, not the car physically in front on the track. This means that if a driver was stuck behind a car they were lapping, my gap would not see that, and for the same reason the leader's laps always count as clean air - even if they were passing lapped/slower cars. 
+- I have only tested my methods on one race.
+
+These limits are another reason why I kept the `InTraffic` laps and the gap instead of removing them. I should test it on all 16 training races before coming to a conclusion on what to do as I move forward. 
+
+### What I need to do going forward.
+
+- When I build my full dataset, I need to work out the gap to the car ahead for every lap and run the same methods of traffic tests across all 16 of my races that I ran in this stage. Then, I will be able to decide whether to remove traffic laps or not. I need to include the gap as part of my cleaning code to do this. 
+- In Stage 2 I found that TyreLife doesn't always show how old a set of tyres really is (Verstappen's second set of soft tyres started at a TyreLife of 1, but FreshTyre was False). I still need to check how often this happens in all my races I'm going to train my model on, and decide how to deal with it.
+- When I loaded my races in stage 4, FastF1 warned me that "all laps marked as inaccurate" for one driver each at the Italian, Singapore, Qatar and Sao Paulo Grand Prix. The Canadian Grand Prix also has 35 laps with no compound recorded. I still need to deal with both of these points when I run my cleaning on more races. 
+- Bahrain didn't have a Safety Car, so I still need to check that my cleaning removes Safety Car laps and the lap after them at races that did have one. 
+
+
